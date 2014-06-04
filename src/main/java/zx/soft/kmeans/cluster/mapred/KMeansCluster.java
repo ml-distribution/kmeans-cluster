@@ -21,20 +21,21 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 /**
- * @author Shannon Quinn
- * 
  * Configures and runs the KMeans algorithm.
+ * 
+ * @author wgybzb
+ *
  */
-public class KMeansDriver extends Configured implements Tool {
+public class KMeansCluster extends Configured implements Tool {
 
 	static enum Counter {
 		CONVERGED
 	}
 
-	public static final String ITERATIONS = "com.magsol.bigdata.hw7.converged";
-	public static final String CLUSTERS = "com.magsol.bigdata.hw7.clusters";
-	public static final String TOLERANCE = "com.magsol.bigdata.hw7.tolerance";
-	public static final String CENTROIDS = "com.magsol.bigdata.hw7.centroids";
+	public static final String ITERATIONS = "kmeans.cluster.converged";
+	public static final String CLUSTERS = "kmeans.cluster.clusters";
+	public static final String TOLERANCE = "kmeans.cluster.tolerance";
+	public static final String CENTROIDS = "kmeans.cluster.centroids";
 
 	/**
 	 * Makes multiple runs on the same path easier.
@@ -97,9 +98,9 @@ public class KMeansDriver extends Configured implements Tool {
 		Configuration centroidConf = new Configuration();
 		Job centroidInputJob = new Job(centroidConf);
 		centroidInputJob.setJobName("KMeans Centroid Input");
-		centroidInputJob.setJarByClass(KMeansDriver.class);
+		centroidInputJob.setJarByClass(KMeansCluster.class);
 		Path centroidsPath = new Path(output.getParent(), "centroids_0");
-		KMeansDriver.delete(centroidConf, centroidsPath);
+		KMeansCluster.delete(centroidConf, centroidsPath);
 
 		centroidInputJob.setInputFormatClass(TextInputFormat.class);
 		centroidInputJob.setOutputFormatClass(SequenceFileOutputFormat.class);
@@ -126,12 +127,12 @@ public class KMeansDriver extends Configured implements Tool {
 		// matters, just having fun). For later, this will be where Canopy
 		// clustering happens.
 		Configuration dataConf = new Configuration();
-		dataConf.setInt(KMeansDriver.CLUSTERS, nClusters);
+		dataConf.setInt(KMeansCluster.CLUSTERS, nClusters);
 		Job inputDataJob = new Job(dataConf);
 		inputDataJob.setJobName("KMeans Data Input / Canopy");
-		inputDataJob.setJarByClass(KMeansDriver.class);
+		inputDataJob.setJarByClass(KMeansCluster.class);
 		Path data = new Path(output.getParent(), "formattedData");
-		KMeansDriver.delete(dataConf, data);
+		KMeansCluster.delete(dataConf, data);
 
 		inputDataJob.setInputFormatClass(TextInputFormat.class);
 		inputDataJob.setOutputFormatClass(SequenceFileOutputFormat.class);
@@ -160,16 +161,16 @@ public class KMeansDriver extends Configured implements Tool {
 		long changes = 0;
 		do {
 			Configuration iterConf = new Configuration();
-			iterConf.setInt(KMeansDriver.CLUSTERS, nClusters);
-			iterConf.setFloat(KMeansDriver.TOLERANCE, tolerance);
+			iterConf.setInt(KMeansCluster.CLUSTERS, nClusters);
+			iterConf.setFloat(KMeansCluster.TOLERANCE, tolerance);
 
 			Path nextIter = new Path(centroidsPath.getParent(), String.format("centroids_%s", iteration));
 			Path prevIter = new Path(centroidsPath.getParent(), String.format("centroids_%s", iteration - 1));
-			iterConf.set(KMeansDriver.CENTROIDS, prevIter.toString());
+			iterConf.set(KMeansCluster.CENTROIDS, prevIter.toString());
 			Job iterJob = new Job(iterConf);
 			iterJob.setJobName("KMeans " + iteration);
-			iterJob.setJarByClass(KMeansDriver.class);
-			KMeansDriver.delete(iterConf, nextIter);
+			iterJob.setJarByClass(KMeansCluster.class);
+			KMeansCluster.delete(iterConf, nextIter);
 
 			// Set input/output formats.
 			iterJob.setInputFormatClass(SequenceFileInputFormat.class);
@@ -197,8 +198,8 @@ public class KMeansDriver extends Configured implements Tool {
 				System.exit(1);
 			}
 			iteration++;
-			changes = iterJob.getCounters().findCounter(KMeansDriver.Counter.CONVERGED).getValue();
-			iterJob.getCounters().findCounter(KMeansDriver.Counter.CONVERGED).setValue(0);
+			changes = iterJob.getCounters().findCounter(KMeansCluster.Counter.CONVERGED).getValue();
+			iterJob.getCounters().findCounter(KMeansCluster.Counter.CONVERGED).setValue(0);
 		} while (changes > 0);
 		System.out.println("Number of iterations: " + (iteration - 1));
 
@@ -241,7 +242,7 @@ public class KMeansDriver extends Configured implements Tool {
 	 * @param args
 	 */
 	public static void main(String[] args) throws Exception {
-		System.exit(ToolRunner.run(new KMeansDriver(), args));
+		System.exit(ToolRunner.run(new KMeansCluster(), args));
 	}
 
 }

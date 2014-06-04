@@ -10,16 +10,17 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
 
 /**
- * @author Shannon Quinn
- *
  * Simply reads each line of the feature vectors and outputs them as 
  * VectorWritables. Initially assigns them a random clusterId (ideally making
  * somewhat even clusters), but this could be extended to perform Canopy
  * clustering (in which case, the centroids are in the DistributedCache).
+ * 
+ * @author wgybzb
+ *
  */
 public class KMeansDataInputMapper extends Mapper<LongWritable, Text, IntWritable, VectorWritable> {
 
-	//private int nClusters;
+	// private int nClusters;
 	ArrayList<VectorWritable> centroids;
 
 	@Override

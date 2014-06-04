@@ -7,11 +7,12 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.mapreduce.Reducer;
 
 /**
- * @author Shannon Quinn
- *
  * Creates an intermediate cluster centroid out of the limited number of local
  * data instances. This is meant to reduce the network traffic and ease the
  * load in the Reducer.
+ * 
+ * @author wgybzb
+ *
  */
 public class KMeansCombiner extends Reducer<IntWritable, VectorWritable, IntWritable, VectorWritable> {
 

@@ -10,12 +10,13 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.mapreduce.Reducer;
 
 /**
- * @author Shannon Quinn
- * 
  * Reads in a combination of instances and partial cluster centroids
  * (differentiated by their "numInstances" field), depending on how much Hadoop
  * decided to utilize Combiners. Uses this information to compute final
  * centroids for each cluster. 
+ * 
+ * @author wgybzb
+ *
  */
 public class KMeansReducer extends Reducer<IntWritable, VectorWritable, IntWritable, VectorWritable> {
 
@@ -24,8 +25,8 @@ public class KMeansReducer extends Reducer<IntWritable, VectorWritable, IntWrita
 	@Override
 	protected void setup(Context context) throws IOException {
 		Configuration conf = context.getConfiguration();
-		Path centroidsPath = new Path(conf.get(KMeansDriver.CENTROIDS));
-		centroids = KMeansDriver.readCentroids(conf, centroidsPath);
+		Path centroidsPath = new Path(conf.get(KMeansCluster.CENTROIDS));
+		centroids = KMeansCluster.readCentroids(conf, centroidsPath);
 	}
 
 	@Override
@@ -57,9 +58,9 @@ public class KMeansReducer extends Reducer<IntWritable, VectorWritable, IntWrita
 			}
 
 			// Did this centroid change between iterations?
-			float tolerance = context.getConfiguration().getFloat(KMeansDriver.TOLERANCE, 0.000001F);
+			float tolerance = context.getConfiguration().getFloat(KMeansCluster.TOLERANCE, 0.000001F);
 			if (residual > tolerance) {
-				context.getCounter(KMeansDriver.Counter.CONVERGED).increment(1);
+				context.getCounter(KMeansCluster.Counter.CONVERGED).increment(1);
 			}
 
 			// Write out the new centroid.

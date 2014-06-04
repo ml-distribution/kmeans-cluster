@@ -8,10 +8,9 @@ import java.util.Vector;
 import org.apache.hadoop.io.Writable;
 
 /**
- * @author Shannon Quinn
+ * 定义KMeans聚类的特征向量，除了特征向量自己外，还包含一个聚类ID。
+ * @author wgybzb
  *
- * Defines the feature vector for KMeans clustering. Contains a cluster ID
- * in addition to the feature vector itself.
  */
 public class VectorWritable implements Writable {
 

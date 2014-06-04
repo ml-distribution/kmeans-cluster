@@ -9,10 +9,11 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
 
 /**
- * @author Shannon Quinn
- *
  * Simply reads in the text versions of the centroids and writes them back
  * out as VectorWritables.
+ * 
+ * @author wgybzb
+ *
  */
 public class KMeansCentroidInputMapper extends Mapper<LongWritable, Text, IntWritable, VectorWritable> {
 

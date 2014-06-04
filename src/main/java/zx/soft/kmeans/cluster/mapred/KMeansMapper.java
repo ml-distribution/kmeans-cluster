@@ -10,12 +10,13 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.mapreduce.Mapper;
 
 /**
- * @author Shannon Quinn
- *
  * Reads an instance from HDFS, computes the Euclidean distance between it
  * and each cluster centroid (from the DistributedCache), and assigns it to 
  * the nearest one. If this centroid is different from the instance's previous
  * cluster assignment, the CONVERGED counter is updated.
+ * 
+ * @author wgybzb
+ *
  */
 public class KMeansMapper extends Mapper<IntWritable, VectorWritable, IntWritable, VectorWritable> {
 
@@ -25,21 +26,21 @@ public class KMeansMapper extends Mapper<IntWritable, VectorWritable, IntWritabl
 	@Override
 	protected void setup(Context context) throws IOException {
 		Configuration conf = context.getConfiguration();
-		Path centroidsPath = new Path(conf.get(KMeansDriver.CENTROIDS));
-		centroids = new ArrayList<VectorWritable>(KMeansDriver.readCentroids(conf, centroidsPath).values());
-		nClusters = conf.getInt(KMeansDriver.CLUSTERS, centroids.size());
+		Path centroidsPath = new Path(conf.get(KMeansCluster.CENTROIDS));
+		centroids = new ArrayList<VectorWritable>(KMeansCluster.readCentroids(conf, centroidsPath).values());
+		nClusters = conf.getInt(KMeansCluster.CLUSTERS, centroids.size());
 	}
 
 	@Override
 	public void map(IntWritable previousId, VectorWritable instance, Context context) throws InterruptedException,
 			IOException {
 
-		// Which centroid is this instance closest to?
+		// 计算当前的instance距离哪一个中心点最近
 		Vector<Double> v = instance.get();
 		double distance = Double.MAX_VALUE;
 		int clusterId = -1;
 		for (VectorWritable centroid : centroids) {
-			// Compute the Euclidean distance (L2 norm).
+			// 计算Euclidean距离(L2 norm)
 			Vector<Double> c = centroid.get();
 			double squaredSum = 0.0;
 			for (int i = 0; i < c.size(); ++i) {
@@ -53,10 +54,10 @@ public class KMeansMapper extends Mapper<IntWritable, VectorWritable, IntWritabl
 			}
 		}
 
-		// Output the (possibly new) cluster membership, and the instance.
+		// 输出聚类的关系和实例
 		context.write(new IntWritable(clusterId), instance);
 
-		// Output a bunch of dummy vectors.
+		// 输出一串伪向量.
 		VectorWritable dummy = new VectorWritable(new Vector<Double>(), -1, -1);
 		for (int i = 1; i <= nClusters; ++i) {
 			if (i != clusterId) {
