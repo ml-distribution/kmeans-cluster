@@ -21,12 +21,12 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 /**
- * Configures and runs the KMeans algorithm.
+ * Configures and runs the KMeansMapRed algorithm.
  * 
  * @author wgybzb
  *
  */
-public class KMeansCluster extends Configured implements Tool {
+public class KMeansClusterDistribute extends Configured implements Tool {
 
 	static enum Counter {
 		CONVERGED
@@ -97,10 +97,10 @@ public class KMeansCluster extends Configured implements Tool {
 		// be removed if/when Canopy clusering is brought up.
 		Configuration centroidConf = new Configuration();
 		Job centroidInputJob = new Job(centroidConf);
-		centroidInputJob.setJobName("KMeans Centroid Input");
-		centroidInputJob.setJarByClass(KMeansCluster.class);
+		centroidInputJob.setJobName("KMeansMapRed Centroid Input");
+		centroidInputJob.setJarByClass(KMeansClusterDistribute.class);
 		Path centroidsPath = new Path(output.getParent(), "centroids_0");
-		KMeansCluster.delete(centroidConf, centroidsPath);
+		KMeansClusterDistribute.delete(centroidConf, centroidsPath);
 
 		centroidInputJob.setInputFormatClass(TextInputFormat.class);
 		centroidInputJob.setOutputFormatClass(SequenceFileOutputFormat.class);
@@ -127,12 +127,12 @@ public class KMeansCluster extends Configured implements Tool {
 		// matters, just having fun). For later, this will be where Canopy
 		// clustering happens.
 		Configuration dataConf = new Configuration();
-		dataConf.setInt(KMeansCluster.CLUSTERS, nClusters);
+		dataConf.setInt(KMeansClusterDistribute.CLUSTERS, nClusters);
 		Job inputDataJob = new Job(dataConf);
-		inputDataJob.setJobName("KMeans Data Input / Canopy");
-		inputDataJob.setJarByClass(KMeansCluster.class);
+		inputDataJob.setJobName("KMeansMapRed Data Input / Canopy");
+		inputDataJob.setJarByClass(KMeansClusterDistribute.class);
 		Path data = new Path(output.getParent(), "formattedData");
-		KMeansCluster.delete(dataConf, data);
+		KMeansClusterDistribute.delete(dataConf, data);
 
 		inputDataJob.setInputFormatClass(TextInputFormat.class);
 		inputDataJob.setOutputFormatClass(SequenceFileOutputFormat.class);
@@ -161,16 +161,16 @@ public class KMeansCluster extends Configured implements Tool {
 		long changes = 0;
 		do {
 			Configuration iterConf = new Configuration();
-			iterConf.setInt(KMeansCluster.CLUSTERS, nClusters);
-			iterConf.setFloat(KMeansCluster.TOLERANCE, tolerance);
+			iterConf.setInt(KMeansClusterDistribute.CLUSTERS, nClusters);
+			iterConf.setFloat(KMeansClusterDistribute.TOLERANCE, tolerance);
 
 			Path nextIter = new Path(centroidsPath.getParent(), String.format("centroids_%s", iteration));
 			Path prevIter = new Path(centroidsPath.getParent(), String.format("centroids_%s", iteration - 1));
-			iterConf.set(KMeansCluster.CENTROIDS, prevIter.toString());
+			iterConf.set(KMeansClusterDistribute.CENTROIDS, prevIter.toString());
 			Job iterJob = new Job(iterConf);
-			iterJob.setJobName("KMeans " + iteration);
-			iterJob.setJarByClass(KMeansCluster.class);
-			KMeansCluster.delete(iterConf, nextIter);
+			iterJob.setJobName("KMeansMapRed " + iteration);
+			iterJob.setJarByClass(KMeansClusterDistribute.class);
+			KMeansClusterDistribute.delete(iterConf, nextIter);
 
 			// Set input/output formats.
 			iterJob.setInputFormatClass(SequenceFileInputFormat.class);
@@ -198,8 +198,8 @@ public class KMeansCluster extends Configured implements Tool {
 				System.exit(1);
 			}
 			iteration++;
-			changes = iterJob.getCounters().findCounter(KMeansCluster.Counter.CONVERGED).getValue();
-			iterJob.getCounters().findCounter(KMeansCluster.Counter.CONVERGED).setValue(0);
+			changes = iterJob.getCounters().findCounter(KMeansClusterDistribute.Counter.CONVERGED).getValue();
+			iterJob.getCounters().findCounter(KMeansClusterDistribute.Counter.CONVERGED).setValue(0);
 		} while (changes > 0);
 		System.out.println("Number of iterations: " + (iteration - 1));
 
@@ -242,7 +242,7 @@ public class KMeansCluster extends Configured implements Tool {
 	 * @param args
 	 */
 	public static void main(String[] args) throws Exception {
-		System.exit(ToolRunner.run(new KMeansCluster(), args));
+		System.exit(ToolRunner.run(new KMeansClusterDistribute(), args));
 	}
 
 }

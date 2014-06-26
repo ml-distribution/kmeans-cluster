@@ -26,9 +26,9 @@ public class KMeansMapper extends Mapper<IntWritable, VectorWritable, IntWritabl
 	@Override
 	protected void setup(Context context) throws IOException {
 		Configuration conf = context.getConfiguration();
-		Path centroidsPath = new Path(conf.get(KMeansCluster.CENTROIDS));
-		centroids = new ArrayList<VectorWritable>(KMeansCluster.readCentroids(conf, centroidsPath).values());
-		nClusters = conf.getInt(KMeansCluster.CLUSTERS, centroids.size());
+		Path centroidsPath = new Path(conf.get(KMeansClusterDistribute.CENTROIDS));
+		centroids = new ArrayList<VectorWritable>(KMeansClusterDistribute.readCentroids(conf, centroidsPath).values());
+		nClusters = conf.getInt(KMeansClusterDistribute.CLUSTERS, centroids.size());
 	}
 
 	@Override

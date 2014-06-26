@@ -25,8 +25,8 @@ public class KMeansReducer extends Reducer<IntWritable, VectorWritable, IntWrita
 	@Override
 	protected void setup(Context context) throws IOException {
 		Configuration conf = context.getConfiguration();
-		Path centroidsPath = new Path(conf.get(KMeansCluster.CENTROIDS));
-		centroids = KMeansCluster.readCentroids(conf, centroidsPath);
+		Path centroidsPath = new Path(conf.get(KMeansClusterDistribute.CENTROIDS));
+		centroids = KMeansClusterDistribute.readCentroids(conf, centroidsPath);
 	}
 
 	@Override
@@ -58,9 +58,9 @@ public class KMeansReducer extends Reducer<IntWritable, VectorWritable, IntWrita
 			}
 
 			// Did this centroid change between iterations?
-			float tolerance = context.getConfiguration().getFloat(KMeansCluster.TOLERANCE, 0.000001F);
+			float tolerance = context.getConfiguration().getFloat(KMeansClusterDistribute.TOLERANCE, 0.000001F);
 			if (residual > tolerance) {
-				context.getCounter(KMeansCluster.Counter.CONVERGED).increment(1);
+				context.getCounter(KMeansClusterDistribute.Counter.CONVERGED).increment(1);
 			}
 
 			// Write out the new centroid.
