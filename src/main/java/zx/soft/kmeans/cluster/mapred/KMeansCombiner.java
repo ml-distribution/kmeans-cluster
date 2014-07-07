@@ -7,11 +7,10 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.mapreduce.Reducer;
 
 /**
- * Creates an intermediate cluster centroid out of the limited number of local
- * data instances. This is meant to reduce the network traffic and ease the
- * load in the Reducer.
+ * 从固定数量的本地数据实例中创建一个临时的聚类中心。
+ * 以减少网络传输和Reducer端的负载。
  * 
- * @author wgybzb
+ * @author wanggang
  *
  */
 public class KMeansCombiner extends Reducer<IntWritable, VectorWritable, IntWritable, VectorWritable> {
@@ -19,37 +18,38 @@ public class KMeansCombiner extends Reducer<IntWritable, VectorWritable, IntWrit
 	@Override
 	public void reduce(IntWritable clusterId, Iterable<VectorWritable> instances, Context context)
 			throws InterruptedException, IOException {
-		Vector<Double> partial = new Vector<Double>();
+
+		Vector<Double> partial = new Vector<>();
 		int num = 0;
 
-		// Loop through the vectors, adding them together into a partial centroid.
+		// 循环向量集合, 并添加到局部聚类中心
 		for (VectorWritable v : instances) {
-			Vector<Double> instance = v.get();
+			Vector<Double> instance = v.getVector();
 			if (instance.size() > 0) {
-				partial = KMeansCombiner.add(partial, instance);
+				partial = add(partial, instance);
 				num += 1;
 			}
 		}
 
-		// Did we get any actual vectors? Or just dummies?
+		// 对真实向量和伪向量处理
 		if (num > 0) {
 			context.write(clusterId, new VectorWritable(partial, clusterId.get(), num));
 		} else {
-			// Write out the dummy.
+			// 输出虚拟向量
 			context.write(clusterId, new VectorWritable(new Vector<Double>(), -1, -1));
 		}
 	}
 
 	public static Vector<Double> add(Vector<Double> partial, Vector<Double> v) {
-		Vector<Double> retval = new Vector<Double>(v.size());
+		Vector<Double> result = new Vector<>(v.size());
 		for (int i = 0; i < v.size(); ++i) {
 			if (partial.size() < v.size()) {
-				retval.insertElementAt(v.get(i), i);
+				result.insertElementAt(v.get(i), i);
 			} else {
-				retval.insertElementAt(new Double(partial.get(i).doubleValue() + v.get(i).doubleValue()), i);
+				result.insertElementAt(partial.get(i).doubleValue() + v.get(i).doubleValue(), i);
 			}
 		}
-		return retval;
+		return result;
 	}
 
 }

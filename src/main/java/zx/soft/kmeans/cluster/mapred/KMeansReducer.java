@@ -10,12 +10,10 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.mapreduce.Reducer;
 
 /**
- * Reads in a combination of instances and partial cluster centroids
- * (differentiated by their "numInstances" field), depending on how much Hadoop
- * decided to utilize Combiners. Uses this information to compute final
- * centroids for each cluster. 
+ * 依据Hadoop使用的Combiners数量，读取实例和局部聚类中心（通过numInstances区分）的混合数据。
+ * 使用该信息计算每个聚类的最终中心集合。
  * 
- * @author wgybzb
+ * @author wanggang
  *
  */
 public class KMeansReducer extends Reducer<IntWritable, VectorWritable, IntWritable, VectorWritable> {
@@ -25,45 +23,45 @@ public class KMeansReducer extends Reducer<IntWritable, VectorWritable, IntWrita
 	@Override
 	protected void setup(Context context) throws IOException {
 		Configuration conf = context.getConfiguration();
-		Path centroidsPath = new Path(conf.get(KMeansClusterDistribute.CENTROIDS));
+		Path centroidsPath = new Path(conf.get(KMeansConstant.CENTROIDS));
 		centroids = KMeansClusterDistribute.readCentroids(conf, centroidsPath);
 	}
 
 	@Override
-	public void reduce(IntWritable clusterId, Iterable<VectorWritable> values, Context context) throws IOException,
+	public void reduce(IntWritable clusterId, Iterable<VectorWritable> instances, Context context) throws IOException,
 			InterruptedException {
-		Vector<Double> centroid = new Vector<Double>();
+
+		Vector<Double> centroid = new Vector<>();
 		int num = 0;
-		for (VectorWritable v : values) {
-			Vector<Double> instance = v.get();
+		for (VectorWritable v : instances) {
+			Vector<Double> instance = v.getVector();
 			if (instance.size() > 0) {
 				centroid = KMeansCombiner.add(centroid, instance);
 				num += v.getNumInstances();
 			}
 		}
 
-		// Is this an empty centroid?
+		// 空的中心
 		if (num == 0) {
-			// Write out the previous centroid for this cluster.
-			context.write(clusterId, centroids.get(new Integer(clusterId.get())));
+			// 使用上一次迭代的聚类中心
+			context.write(clusterId, centroids.get(clusterId.get()));
 		} else {
-			// Average the values. Also record the residual sum of squares
-			// difference between the current value and the previous one.
+			// 计算平均值，并记录当前值与上一次迭代的差的总和
 			double residual = 0.0;
-			Vector<Double> previous = centroids.get(new Integer(clusterId.get())).get();
+			Vector<Double> previous = centroids.get(clusterId.get()).getVector();
 			for (int i = 0; i < centroid.size(); ++i) {
 				double value = centroid.get(i).doubleValue() / num;
 				residual += (value - previous.get(i).doubleValue());
 				centroid.set(i, new Double(value));
 			}
 
-			// Did this centroid change between iterations?
-			float tolerance = context.getConfiguration().getFloat(KMeansClusterDistribute.TOLERANCE, 0.000001F);
+			// 判断中心是否改变
+			float tolerance = context.getConfiguration().getFloat(KMeansConstant.TOLERANCE, 0.000001F);
 			if (residual > tolerance) {
-				context.getCounter(KMeansClusterDistribute.Counter.CONVERGED).increment(1);
+				context.getCounter(KMeansConstant.Counter.CONVERGED).increment(1);
 			}
 
-			// Write out the new centroid.
+			// 输出新的中心
 			context.write(clusterId, new VectorWritable(centroid, clusterId.get(), num));
 		}
 	}

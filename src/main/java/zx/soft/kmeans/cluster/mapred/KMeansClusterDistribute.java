@@ -9,6 +9,7 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.mapreduce.Job;
@@ -17,128 +18,81 @@ import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import zx.soft.kmeans.cluster.utils.HDFSUtils;
 
 /**
- * Configures and runs the KMeansMapRed algorithm.
+ * K-Means聚类算法主类
  * 
- * @author wgybzb
+ * @author wanggang
  *
  */
 public class KMeansClusterDistribute extends Configured implements Tool {
 
-	static enum Counter {
-		CONVERGED
-	}
-
-	public static final String ITERATIONS = "kmeans.cluster.converged";
-	public static final String CLUSTERS = "kmeans.cluster.clusters";
-	public static final String TOLERANCE = "kmeans.cluster.tolerance";
-	public static final String CENTROIDS = "kmeans.cluster.centroids";
+	private static Logger logger = LoggerFactory.getLogger(KMeansClusterDistribute.class);
 
 	/**
-	 * Makes multiple runs on the same path easier.
-	 * @param conf
-	 * @param path
-	 * @throws IOException
-	 */
-	public static void delete(Configuration conf, Path path) throws IOException {
-		FileSystem fs = path.getFileSystem(conf);
-		if (fs.exists(path)) {
-			fs.delete(path, true);
-		}
-	}
-
-	/**
-	 * Reads centroids from HDFS.
-	 * @param conf
-	 * @param path
-	 * @throws IOException
+	 * 从HDFS中读取序列化形式的中心数据
 	 */
 	public static HashMap<Integer, VectorWritable> readCentroids(Configuration conf, Path path) throws IOException {
-		HashMap<Integer, VectorWritable> centroids = new HashMap<Integer, VectorWritable>();
+		logger.info("开始读取中心数据......");
+		HashMap<Integer, VectorWritable> centroids = new HashMap<>();
 		FileSystem fs = FileSystem.get(path.toUri(), conf);
 		FileStatus[] list = fs.globStatus(new Path(path, "part-*"));
 		for (FileStatus status : list) {
-			SequenceFile.Reader reader = new SequenceFile.Reader(fs, status.getPath(), conf);
-			IntWritable key = null;
-			VectorWritable value = null;
+			SequenceFile.Reader reader = null;
 			try {
-				key = (IntWritable) reader.getKeyClass().newInstance();
-				value = (VectorWritable) reader.getValueClass().newInstance();
-			} catch (InstantiationException e) {
-				e.printStackTrace();
-			} catch (IllegalAccessException e) {
-				e.printStackTrace();
+				reader = new SequenceFile.Reader(fs, status.getPath(), conf);
+				IntWritable key = (IntWritable) ReflectionUtils.newInstance(reader.getKeyClass(), conf);
+				VectorWritable value = (VectorWritable) ReflectionUtils.newInstance(reader.getValueClass(), conf);
+				while (reader.next(key, value)) {
+					centroids.put(new Integer(key.get()), new VectorWritable(value.getVector(), value.getClusterId(),
+							value.getNumInstances()));
+				}
+			} finally {
+				IOUtils.closeStream(reader);
 			}
-			while (reader.next(key, value)) {
-				centroids.put(new Integer(key.get()),
-						new VectorWritable(value.get(), value.getClusterId(), value.getNumInstances()));
-			}
-			reader.close();
 		}
+		logger.info("读取中心数据结束......");
 		return centroids;
 	}
 
 	@Override
 	public int run(String[] args) throws Exception {
+
 		Configuration conf = getConf();
 
-		// Read in the command line arguments.
+		// 读取命令行参数
 		Path dataInput = new Path(conf.get("input"));
 		Path centroids = new Path(conf.get("centroids"));
 		Path output = new Path(conf.get("output"));
-		int nClusters = conf.getInt("n_clusters", 8); // scikit-learn style
+		int nClusters = conf.getInt("clusters", 8);
 		int nReducers = conf.getInt("reducers", 10);
 		float tolerance = conf.getFloat("tolerance", 1e-6F);
 
-		// Job 0a: Read in the cluster centroids. This job could potentially
-		// be removed if/when Canopy clusering is brought up.
-		Configuration centroidConf = new Configuration();
-		Job centroidInputJob = new Job(centroidConf);
-		centroidInputJob.setJobName("KMeansMapRed Centroid Input");
-		centroidInputJob.setJarByClass(KMeansClusterDistribute.class);
-		Path centroidsPath = new Path(output.getParent(), "centroids_0");
-		KMeansClusterDistribute.delete(centroidConf, centroidsPath);
-
-		centroidInputJob.setInputFormatClass(TextInputFormat.class);
-		centroidInputJob.setOutputFormatClass(SequenceFileOutputFormat.class);
-
-		centroidInputJob.setMapperClass(KMeansCentroidInputMapper.class);
-		// No Combiner, no Reducer.
-
-		centroidInputJob.setMapOutputKeyClass(IntWritable.class);
-		centroidInputJob.setMapOutputValueClass(VectorWritable.class);
-		centroidInputJob.setOutputKeyClass(IntWritable.class);
-		centroidInputJob.setOutputValueClass(VectorWritable.class);
-
-		FileInputFormat.addInputPath(centroidInputJob, centroids);
-		FileOutputFormat.setOutputPath(centroidInputJob, centroidsPath);
-		centroidInputJob.setNumReduceTasks(0);
-
-		if (!centroidInputJob.waitForCompletion(true)) {
-			System.err.println("Centroid input job failed!");
-			System.exit(1);
-		}
-
-		// Job 0b: Read in the data. For now, cluster centroids are randomly
-		// assigned to try and make them more or less uniform (not that it
-		// matters, just having fun). For later, this will be where Canopy
-		// clustering happens.
+		/**
+		 * 作业1: 输入数据读取，并初始化聚类中心。
+		 * 
+		 * Canopy聚类算法用于解决随机初始化不均匀问题。
+		 */
 		Configuration dataConf = new Configuration();
-		dataConf.setInt(KMeansClusterDistribute.CLUSTERS, nClusters);
+		dataConf.setInt(KMeansConstant.CLUSTERS, nClusters);
 		Job inputDataJob = new Job(dataConf);
-		inputDataJob.setJobName("KMeansMapRed Data Input / Canopy");
+		inputDataJob.setJobName("KMeans-Cluster-Data-Input/Canopy");
 		inputDataJob.setJarByClass(KMeansClusterDistribute.class);
 		Path data = new Path(output.getParent(), "formattedData");
-		KMeansClusterDistribute.delete(dataConf, data);
+		HDFSUtils.delete(dataConf, data);
 
 		inputDataJob.setInputFormatClass(TextInputFormat.class);
 		inputDataJob.setOutputFormatClass(SequenceFileOutputFormat.class);
 
 		inputDataJob.setMapperClass(KMeansDataInputMapper.class);
-		// No Combiner, no Reducer.
+		// 没有Combiner和Reducer
 
 		inputDataJob.setMapOutputKeyClass(IntWritable.class);
 		inputDataJob.setMapOutputValueClass(VectorWritable.class);
@@ -154,40 +108,74 @@ public class KMeansClusterDistribute extends Configured implements Tool {
 			System.exit(1);
 		}
 
-		// Preprocessing is done. Now on to the clustering.
+		/**
+		 * 作业2: 中心数据读取。
+		 * 
+		 * 如果使用Canopy聚类算法的话，无需执行该作业。
+		 */
+		Configuration centroidConf = new Configuration();
+		Job centroidInputJob = new Job(centroidConf);
+		centroidInputJob.setJobName("KMeans-Cluster-Centroid-Init");
+		centroidInputJob.setJarByClass(KMeansClusterDistribute.class);
+		Path centroidsPath = new Path(output.getParent(), "centroids_0");
+		HDFSUtils.delete(centroidConf, centroidsPath);
 
-		// Loop!
+		centroidInputJob.setInputFormatClass(TextInputFormat.class);
+		centroidInputJob.setOutputFormatClass(SequenceFileOutputFormat.class);
+
+		centroidInputJob.setMapperClass(KMeansCentroidInputMapper.class);
+		// 没有Combiner和Reducer
+
+		centroidInputJob.setMapOutputKeyClass(IntWritable.class);
+		centroidInputJob.setMapOutputValueClass(VectorWritable.class);
+		centroidInputJob.setOutputKeyClass(IntWritable.class);
+		centroidInputJob.setOutputValueClass(VectorWritable.class);
+
+		FileInputFormat.addInputPath(centroidInputJob, centroids);
+		FileOutputFormat.setOutputPath(centroidInputJob, centroidsPath);
+		centroidInputJob.setNumReduceTasks(0);
+
+		if (!centroidInputJob.waitForCompletion(true)) {
+			System.err.println("Centroid input job failed!");
+			System.exit(1);
+		}
+
+		logger.info("数据处理阶段完成，开始聚类迭代......");
+
+		/**
+		 * 作业链3：循环迭代
+		 */
 		int iteration = 1;
 		long changes = 0;
 		do {
 			Configuration iterConf = new Configuration();
-			iterConf.setInt(KMeansClusterDistribute.CLUSTERS, nClusters);
-			iterConf.setFloat(KMeansClusterDistribute.TOLERANCE, tolerance);
+			iterConf.setInt(KMeansConstant.CLUSTERS, nClusters);
+			iterConf.setFloat(KMeansConstant.TOLERANCE, tolerance);
 
 			Path nextIter = new Path(centroidsPath.getParent(), String.format("centroids_%s", iteration));
 			Path prevIter = new Path(centroidsPath.getParent(), String.format("centroids_%s", iteration - 1));
-			iterConf.set(KMeansClusterDistribute.CENTROIDS, prevIter.toString());
+			iterConf.set(KMeansConstant.CENTROIDS, prevIter.toString());
 			Job iterJob = new Job(iterConf);
-			iterJob.setJobName("KMeansMapRed " + iteration);
+			iterJob.setJobName("KMeans-Cluster-Iteration-" + iteration);
 			iterJob.setJarByClass(KMeansClusterDistribute.class);
-			KMeansClusterDistribute.delete(iterConf, nextIter);
+			HDFSUtils.delete(iterConf, nextIter);
 
-			// Set input/output formats.
+			// 输入输出数据格式
 			iterJob.setInputFormatClass(SequenceFileInputFormat.class);
 			iterJob.setOutputFormatClass(SequenceFileOutputFormat.class);
 
-			// Set Mapper, Reducer, Combiner
+			// 设置Mapper, Combiner, Reducer
 			iterJob.setMapperClass(KMeansMapper.class);
 			iterJob.setCombinerClass(KMeansCombiner.class);
 			iterJob.setReducerClass(KMeansReducer.class);
 
-			// Set MR formats.
+			// 设置MapReduce键值格式
 			iterJob.setMapOutputKeyClass(IntWritable.class);
 			iterJob.setMapOutputValueClass(VectorWritable.class);
 			iterJob.setOutputKeyClass(IntWritable.class);
 			iterJob.setOutputValueClass(VectorWritable.class);
 
-			// Set input/output paths.
+			// 设置输出路径
 			FileInputFormat.addInputPath(iterJob, data);
 			FileOutputFormat.setOutputPath(iterJob, nextIter);
 
@@ -198,51 +186,55 @@ public class KMeansClusterDistribute extends Configured implements Tool {
 				System.exit(1);
 			}
 			iteration++;
-			changes = iterJob.getCounters().findCounter(KMeansClusterDistribute.Counter.CONVERGED).getValue();
-			iterJob.getCounters().findCounter(KMeansClusterDistribute.Counter.CONVERGED).setValue(0);
+			changes = iterJob.getCounters().findCounter(KMeansConstant.Counter.CONVERGED).getValue();
+			iterJob.getCounters().findCounter(KMeansConstant.Counter.CONVERGED).setValue(0);
 		} while (changes > 0);
-		System.out.println("Number of iterations: " + (iteration - 1));
 
-		// Finally, read through the centroids and print them out.
+		logger.info("Number of iterations: " + (iteration - 1));
+
+		/**
+		 * 读取聚类中心，并输出
+		 */
 		Path prevIter = new Path(centroidsPath.getParent(), String.format("centroids_%s", iteration - 1));
 		Configuration finalConf = getConf();
 		FileSystem fs = prevIter.getFileSystem(finalConf);
 		Path pathPattern = new Path(prevIter, "part-*");
 		FileStatus[] list = fs.globStatus(pathPattern);
 		for (FileStatus status : list) {
-			SequenceFile.Reader reader = new SequenceFile.Reader(fs, status.getPath(), finalConf);
-			IntWritable key = null;
-			VectorWritable value = null;
+			SequenceFile.Reader reader = null;
 			try {
-				key = (IntWritable) reader.getKeyClass().newInstance();
-				value = (VectorWritable) reader.getValueClass().newInstance();
-			} catch (InstantiationException e) {
-				e.printStackTrace();
-			} catch (IllegalAccessException e) {
-				e.printStackTrace();
-			}
-			while (reader.next(key, value)) {
-				System.out.print(String.format("Centroid %s: ", key.get()));
-				Vector<Double> v = value.get();
-				for (int i = 0; i < v.size(); ++i) {
-					System.out.print(String.format("%.2f", v.get(i).doubleValue()));
-					if (i < v.size() - 1) {
-						System.out.print(",");
+				reader = new SequenceFile.Reader(fs, status.getPath(), finalConf);
+				IntWritable key = (IntWritable) ReflectionUtils.newInstance(reader.getKeyClass(), conf);
+				VectorWritable value = (VectorWritable) ReflectionUtils.newInstance(reader.getValueClass(), conf);
+				while (reader.next(key, value)) {
+					System.out.print(String.format("Centroid %s: ", key.get()));
+					Vector<Double> v = value.getVector();
+					for (int i = 0; i < v.size(); ++i) {
+						System.out.print(String.format("%.2f", v.get(i).doubleValue()));
+						if (i < v.size() - 1) {
+							System.out.print(",");
+						}
 					}
+					System.out.println();
 				}
-				System.out.println();
+			} finally {
+				reader.close();
 			}
-			reader.close();
 		}
 
 		return 0;
 	}
 
 	/**
-	 * @param args
+	 * 主函数
 	 */
-	public static void main(String[] args) throws Exception {
-		System.exit(ToolRunner.run(new KMeansClusterDistribute(), args));
+	public static void main(String[] args) {
+		try {
+			int exitCode = ToolRunner.run(new KMeansClusterDistribute(), args);
+			System.exit(exitCode);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 }

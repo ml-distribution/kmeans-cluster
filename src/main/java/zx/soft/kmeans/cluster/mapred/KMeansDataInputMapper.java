@@ -10,12 +10,11 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
 
 /**
- * Simply reads each line of the feature vectors and outputs them as 
- * VectorWritables. Initially assigns them a random clusterId (ideally making
- * somewhat even clusters), but this could be extended to perform Canopy
- * clustering (in which case, the centroids are in the DistributedCache).
+ * 读取特征向量的每行，并输出为VectorWritable类。
+ * 初始化阶段，给它们随机赋值一个聚类ID （理想情况下产生一些偶数聚类数）。
+ * 该类可以扩展成可以执行Canopy聚类算法，聚类中心存储在DistributedCache中。
  * 
- * @author wgybzb
+ * @author wanggang
  *
  */
 public class KMeansDataInputMapper extends Mapper<LongWritable, Text, IntWritable, VectorWritable> {
@@ -25,19 +24,20 @@ public class KMeansDataInputMapper extends Mapper<LongWritable, Text, IntWritabl
 
 	@Override
 	protected void setup(Context context) throws IOException {
-		// If we're assigning random clusters:
-		//nClusters = context.getConfiguration().getInt(KMeansDriver.CLUSTERS, 8);
+		// 分配随机聚类数
+		// nClusters = context.getConfiguration().getInt(KMeansDriver.CLUSTERS, 8);
 
-		// If we're doing Canopy clustering:
-		centroids = new ArrayList<VectorWritable>();
+		// 对于Canopy聚类算法
+		centroids = new ArrayList<>();
+
 		/*
-		// Need the list of VectorWritables.
+		// 需要VectorWritable列表
 		Path [] files = DistributedCache.getLocalCacheFiles(context.getConfiguration());
 		if (files == null || files.length < 1) {
 		    throw new IOException("DistributedCache returned an empty file set!");
 		}
 
-		// Read in the shards from the DistributedCache.
+		// 从DistributedCache读取分片信息
 		Configuration conf = context.getConfiguration();
 		LocalFileSystem lfs = FileSystem.getLocal(conf);
 		for (Path file : files) {
@@ -64,13 +64,12 @@ public class KMeansDataInputMapper extends Mapper<LongWritable, Text, IntWritabl
 	public void map(LongWritable key, Text value, Context context) throws InterruptedException, IOException {
 		String[] elements = value.toString().trim().split(",");
 		if (!elements[0].equals("caseid")) {
-			// We have a line of data.
-			Vector<Double> out = new Vector<Double>(elements.length - 1);
+			Vector<Double> out = new Vector<>(elements.length - 1);
 			for (int i = 1; i < elements.length; ++i) {
 				out.add(Double.parseDouble(elements[i]));
 			}
 
-			// Write the points out to no cluster in particular.
+			// 将数据点输出到非聚类中
 			context.write(new IntWritable(-1), new VectorWritable(out, -1));
 		}
 	}

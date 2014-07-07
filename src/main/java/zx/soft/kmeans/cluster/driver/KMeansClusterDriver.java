@@ -14,6 +14,7 @@ public class KMeansClusterDriver {
 		try {
 			pgd.addClass("kMeansClusterDistribute", KMeansClusterDistribute.class, "分布式KMeans聚类算法");
 			pgd.addClass("kMeansClusterSimple", KMeansClusterSimple.class, "简单KMeans聚类算法");
+			pgd.driver(argv);
 			// Success
 			exitCode = 0;
 		} catch (Throwable e) {
