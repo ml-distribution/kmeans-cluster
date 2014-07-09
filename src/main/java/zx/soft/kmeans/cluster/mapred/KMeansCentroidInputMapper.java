@@ -19,7 +19,7 @@ public class KMeansCentroidInputMapper extends Mapper<LongWritable, Text, IntWri
 	@Override
 	public void map(LongWritable key, Text value, Context context) throws InterruptedException, IOException {
 		// 提取特征向量和聚类ID
-		String[] elements = value.toString().trim().split(",");
+		String[] elements = value.toString().trim().split("\\s");
 
 		Vector<Double> out = new Vector<>();
 		int clusterId = Integer.parseInt(elements[0]);

@@ -69,8 +69,8 @@ public class KMeansClusterDistribute extends Configured implements Tool {
 
 		// 读取命令行参数
 		Path dataInput = new Path(conf.get("input"));
-		Path centroids = new Path(conf.get("centroids"));
 		Path output = new Path(conf.get("output"));
+		Path centroids = new Path(conf.get("centroids"));
 		int nClusters = conf.getInt("clusters", 8);
 		int nReducers = conf.getInt("reducers", 10);
 		float tolerance = conf.getFloat("tolerance", 1e-6F);
