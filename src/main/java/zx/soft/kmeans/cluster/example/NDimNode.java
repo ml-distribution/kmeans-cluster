@@ -9,18 +9,35 @@ package zx.soft.kmeans.cluster.example;
 public class NDimNode {
 
 	// 维度
-	private final int dimension;
+	private int dimension;
 	// 坐标
-	private final double[] coordinates;
+	private double[] coordinates;
+
+	public NDimNode() {
+		//
+	}
 
 	public NDimNode(int dimension) {
 		this.dimension = dimension;
-		coordinates = new double[dimension];
+		this.coordinates = new double[dimension];
 	}
 
 	public NDimNode(NDimNode node) {
 		this.dimension = node.getDimension();
-		this.coordinates = node.getCoordinates();
+		// 不能这样赋值，会导致指针地址一样的
+		//		this.coordinates = node.getCoordinates();
+		this.coordinates = new double[node.getDimension()];
+		for (int i = 0; i < node.getDimension(); i++) {
+			this.coordinates[i] = node.getCoordinates()[i];
+		}
+	}
+
+	public void setDimension(int dimension) {
+		this.dimension = dimension;
+	}
+
+	public void setCoordinates(double[] coordinates) {
+		this.coordinates = coordinates;
 	}
 
 	/**
@@ -46,7 +63,7 @@ public class NDimNode {
 	 */
 	public void add(NDimNode node) {
 		for (int i = 0; i < dimension; i++)
-			coordinates[i] = coordinates[i] + node.getCoordinate(i);
+			coordinates[i] += node.getCoordinate(i);
 	}
 
 	/**
@@ -54,15 +71,15 @@ public class NDimNode {
 	 */
 	public void subtract(NDimNode node) {
 		for (int i = 0; i < dimension; i++)
-			coordinates[i] = coordinates[i] - node.getCoordinate(i);
+			coordinates[i] -= node.getCoordinate(i);
 	}
 
 	/**
 	 * 乘以一个点
 	 */
-	public void multiply(double node) {
+	public void multiply(double value) {
 		for (int i = 0; i < dimension; i++)
-			coordinates[i] = node * coordinates[i];
+			coordinates[i] *= value;
 	}
 
 	/**
@@ -86,12 +103,9 @@ public class NDimNode {
 	 * 返回坐标点维度中的最大值
 	 */
 	public double max() {
-		double value;
 		double max = coordinates[0];
 		for (int i = 1; i < dimension; i++) {
-			value = coordinates[i];
-			if (value > max)
-				max = value;
+			max = Math.max(coordinates[i], max);
 		}
 		return max;
 	}
@@ -108,9 +122,9 @@ public class NDimNode {
 		double productSigma = 1;
 		NDimNode temp = new NDimNode(this);
 		temp.subtract(mean);
-		// compute the product of the deviations and the mahalanobis distance
+		// 计算标准差内积和马氏距离（mahalanobis）
 		for (int i = 0; i < dimension; i++) {
-			productSigma = sigma.getCoordinate(i) * productSigma;
+			productSigma *= sigma.getCoordinate(i);
 			temp.setCoordinate(i, temp.getCoordinate(i) / sigma.getCoordinate(i));
 		}
 		mahalanobis = Math.pow(temp.norm(), 2);
