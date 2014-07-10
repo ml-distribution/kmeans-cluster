@@ -14,15 +14,15 @@ public class KMeansConstant {
 	}
 
 	// 迭代
-	public static final String ITERATIONS = "kmeans.cluster.converged";
+	public static final String ITERATIONS = "KMeansSimple.cluster.converged";
 
 	// 聚类
-	public static final String CLUSTERS = "kmeans.cluster.clusters";
+	public static final String CLUSTERS = "KMeansSimple.cluster.clusters";
 
 	// 迭代终止误差
-	public static final String TOLERANCE = "kmeans.cluster.tolerance";
+	public static final String TOLERANCE = "KMeansSimple.cluster.tolerance";
 
 	// 聚类中心
-	public static final String CENTROIDS = "kmeans.cluster.centroids";
+	public static final String CENTROIDS = "KMeansSimple.cluster.centroids";
 
 }

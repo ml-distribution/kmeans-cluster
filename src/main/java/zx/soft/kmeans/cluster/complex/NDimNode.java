@@ -1,4 +1,4 @@
-package zx.soft.kmeans.cluster.example;
+package zx.soft.kmeans.cluster.complex;
 
 /**
  * 一个N维的点

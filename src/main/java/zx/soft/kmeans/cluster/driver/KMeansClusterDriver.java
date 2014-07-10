@@ -2,8 +2,8 @@ package zx.soft.kmeans.cluster.driver;
 
 import org.apache.hadoop.util.ProgramDriver;
 
+import zx.soft.kmeans.cluster.complex.KMeansCore;
 import zx.soft.kmeans.cluster.mapred.KMeansClusterDistribute;
-import zx.soft.kmeans.cluster.simple.KMeansClusterSimple;
 
 public class KMeansClusterDriver {
 
@@ -13,7 +13,7 @@ public class KMeansClusterDriver {
 		ProgramDriver pgd = new ProgramDriver();
 		try {
 			pgd.addClass("kMeansClusterDistribute", KMeansClusterDistribute.class, "分布式KMeans聚类算法");
-			pgd.addClass("kMeansClusterSimple", KMeansClusterSimple.class, "简单KMeans聚类算法");
+			pgd.addClass("kMeansCore", KMeansCore.class, "简单KMeans聚类算法");
 			pgd.driver(argv);
 			// Success
 			exitCode = 0;

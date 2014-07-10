@@ -1,22 +1,22 @@
-package zx.soft.kmeans.cluster.simple;
+package zx.soft.kmeans.cluster.image;
 
 import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 
 /**
- * This KMeansAction performs a K-means clustering action on a BufferedImage
- * @author Patrick van Kouteren 
+ * 对BufferedImage进行KMeans聚类
+ * 
+ * @author wanggang
  *
  */
-
-public class KMeansAction {
+public class KMeansImage {
 
 	BufferedImage image_temp;
 	boolean not_terminated;
 	int loops, changedPixels;
 	int[] histogram;
-	ArrayList<ClusterClass> classes;
+	ArrayList<Cluster> classes;
 	int[] lowerbounds;
 	public final static int MEAN_BY_MOD = 1;
 	public final static int MEAN_BY_SPACE = 2;
@@ -33,7 +33,7 @@ public class KMeansAction {
 	 * @param bins (k)
 	 * @param histogram
 	 */
-	public KMeansAction(BufferedImage image, int bins, int[] histogram, int initway) {
+	public KMeansImage(BufferedImage image, int bins, int[] histogram, int initway) {
 		this.histogram = histogram;
 		lowerbounds = new int[bins];
 		initialize(image, bins, initway);
@@ -68,7 +68,6 @@ public class KMeansAction {
 
 	/**
 	 * Returns the image created by the processImage method
-	 * @return the result image
 	 */
 	public BufferedImage getResultImage() {
 		return image_temp;
@@ -87,15 +86,14 @@ public class KMeansAction {
 	 * @param image
 	 * @param bins
 	 */
-	@SuppressWarnings("unchecked")
 	private void initialize(BufferedImage image, int bins, int initway) {
 		image_temp = image;
 		loops = 0;
 		changedPixels = 0;
 		not_terminated = true;
-		classes = new ArrayList<ClusterClass>();
+		classes = new ArrayList<Cluster>();
 		for (int i = 0; i < bins; i++) {
-			ClusterClass cc = new ClusterClass(createMean(initway, bins, i, image));
+			Cluster cc = new Cluster(createMean(initway, bins, i, image));
 			classes.add(cc);
 		}
 
@@ -103,7 +101,6 @@ public class KMeansAction {
 
 	/**
 	 * Controls the calculations of the upper- and lowerbounds of ClusterClasses and sets them
-	 *
 	 */
 	private void calculateBounds() {
 		for (int i = 0; i < classes.size(); i++) {
@@ -115,10 +112,8 @@ public class KMeansAction {
 
 	/**
 	 * Does the actual calculation of the lowerbound
-	 * @param ClusterClass
-	 * @return Lowerbound
 	 */
-	private int calculateLowerBound(ClusterClass cc) {
+	private int calculateLowerBound(Cluster cc) {
 		int cMean = cc.getMean();
 		int currentBound = 0;
 		for (int i = 0; i < classes.size(); i++) {
@@ -132,10 +127,8 @@ public class KMeansAction {
 
 	/**
 	 * Does the actual calculation of the upperbound
-	 * @param ClusterClass
-	 * @return Upperbound
 	 */
-	private int calculateUpperBound(ClusterClass cc) {
+	private int calculateUpperBound(Cluster cc) {
 		int cMean = cc.getMean();
 		int currentBound = 255;
 		for (int i = 0; i < classes.size(); i++) {
@@ -221,4 +214,5 @@ public class KMeansAction {
 			return 0;
 		}
 	}
+
 }

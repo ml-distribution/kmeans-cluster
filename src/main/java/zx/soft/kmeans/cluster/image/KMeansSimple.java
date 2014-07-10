@@ -1,15 +1,24 @@
-package zx.soft.kmeans.cluster.simple;
+package zx.soft.kmeans.cluster.image;
 
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-public class kmeans {
+/**
+ * 简单的KMeans聚类
+ * 
+ * @author wanggang
+ *
+ */
+public class KMeansSimple {
 
-	public kmeans() {
+	public KMeansSimple() {
 		//
 	}
 
+	/**
+	 * 主函数
+	 */
 	public static void main(String[] argv) {
 		byte[] buf = new byte[100000];
 		int used = 0;
@@ -85,7 +94,7 @@ public class kmeans {
 			System.err.println("Using " + nclusters + " clusters");
 		}
 
-		kmeans km = new kmeans();
+		KMeansSimple km = new KMeansSimple();
 		Cluster[] clusters = km.findClusters(data, nclusters);
 
 		for (int i = 0; i < clusters.length; i++) {
@@ -422,7 +431,7 @@ public class kmeans {
 		Initialize(nclusters, table, c, q, cp, u, l, a);
 
 		// Cluster IDs.
-		int[] IDs;
+		//		int[] IDs;
 
 		// Clustering.
 		boolean converged = false;
@@ -477,7 +486,7 @@ public class kmeans {
 			UpdateBounds(p, a, u, l);
 
 			// Update cluster IDs.
-			IDs = a;
+			//			IDs = a;
 
 			// Convergence test.
 			converged = true;

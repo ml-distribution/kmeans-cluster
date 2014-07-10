@@ -4,6 +4,10 @@ import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
 
+import zx.soft.kmeans.cluster.complex.KMeansCore;
+import zx.soft.kmeans.cluster.complex.NDimNode;
+import zx.soft.kmeans.cluster.complex.Params;
+
 public class KMeansCoreTest {
 
 	@Test

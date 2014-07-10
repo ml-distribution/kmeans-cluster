@@ -1,16 +1,16 @@
-package zx.soft.kmeans.cluster.simple;
+package zx.soft.kmeans.cluster.image;
 
 /**
- * The ClusterClass is just a class holding the important cluster properties.
- * @author Patrick van Kouteren 
+ * 聚类属性
+ * 
+ * @author wanggang
  *
  */
-
-public class ClusterClass {
+public class Cluster {
 
 	int mean, upperbound, lowerbound;
 
-	public ClusterClass(int m) {
+	public Cluster(int m) {
 		mean = m;
 	}
 

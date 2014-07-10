@@ -1,4 +1,4 @@
-package zx.soft.kmeans.cluster.example;
+package zx.soft.kmeans.cluster.complex;
 
 import java.util.ArrayList;
 import java.util.HashMap;
