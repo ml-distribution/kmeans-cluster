@@ -70,7 +70,6 @@ public class KMeansClusterDistribute extends Configured implements Tool {
 		// 读取命令行参数
 		Path dataInput = new Path(conf.get("input"));
 		Path output = new Path(conf.get("output"));
-		Path centroids = new Path(conf.get("centroids"));
 		int nClusters = conf.getInt("clusters", 8);
 		int nReducers = conf.getInt("reducers", 8);
 		float tolerance = conf.getFloat("tolerance", 1e-6F);
@@ -130,7 +129,7 @@ public class KMeansClusterDistribute extends Configured implements Tool {
 		centroidInputJob.setOutputKeyClass(IntWritable.class);
 		centroidInputJob.setOutputValueClass(VectorWritable.class);
 
-		FileInputFormat.addInputPath(centroidInputJob, centroids);
+		FileInputFormat.addInputPath(centroidInputJob, dataInput);
 		FileOutputFormat.setOutputPath(centroidInputJob, centroidsPath);
 		centroidInputJob.setNumReduceTasks(0);
 
