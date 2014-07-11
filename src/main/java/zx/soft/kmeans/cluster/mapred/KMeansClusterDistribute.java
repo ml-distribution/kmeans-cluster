@@ -71,8 +71,10 @@ public class KMeansClusterDistribute extends Configured implements Tool {
 		Path dataInput = new Path(conf.get("input"));
 		Path output = new Path(conf.get("output"));
 		int nClusters = conf.getInt("clusters", 8);
-		int nReducers = conf.getInt("reducers", 8);
+		int nReducers = conf.getInt("reducers", 1);
 		float tolerance = conf.getFloat("tolerance", 1e-6F);
+		// 清除输出目录
+		HDFSUtils.delete(conf, output);
 
 		/**
 		 * 作业1: 输入数据读取，并初始化聚类中心。
@@ -208,7 +210,7 @@ public class KMeansClusterDistribute extends Configured implements Tool {
 					System.out.print(String.format("Centroid %s: ", key.get()));
 					Vector<Double> vector = value.getVector();
 					for (int i = 0; i < vector.size(); ++i) {
-						System.out.print(String.format("%.2f", vector.get(i)));
+						System.out.print(String.format("%.8f", vector.get(i)));
 						if (i < vector.size() - 1) {
 							System.out.print(",");
 						}

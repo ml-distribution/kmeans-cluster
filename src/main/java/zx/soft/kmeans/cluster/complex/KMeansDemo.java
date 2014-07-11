@@ -36,7 +36,7 @@ public class KMeansDemo {
 		for (int k = 1; k <= maxk; k++) {
 			System.out.println("********************************************");
 			Params params = kmeans.cluster(nodes, k, epsilon);
-			KMeansDemo.printResults(params);
+			KMeansCore.printResults(params);
 			if (params.getMinDescLen() < bestMDL) {
 				bestModel = k;
 				bestMDL = params.getMinDescLen();
@@ -46,26 +46,6 @@ public class KMeansDemo {
 		System.out.println("********************************************");
 		System.out.println("The most likely model is " + bestModel + " Gaussians");
 
-	}
-
-	/**
-	 * 打印每次迭代过程中的参数值
-	 */
-	public static void printResults(Params params) {
-		System.out.println("Trying " + params.getK() + " clusters...");
-		System.out.println("Converged after " + params.getNumOfIters() + " iterations");
-		for (int j = 0; j < params.getK(); j++) {
-			System.out.println();
-			System.out.println("Gaussian no. " + (j + 1));
-			System.out.println("---------------");
-			System.out.println("mean " + params.getCentroids()[j]);
-			System.out.println("sigma " + params.getSigma()[j]);
-			System.out.println("prior " + params.getPrior()[j]);
-		}
-		System.out.println();
-		System.out.println("Model quality:");
-		System.out.println("Log-Likelihood " + params.getLogLikelihood());
-		System.out.println("MdL " + params.getMinDescLen());
 	}
 
 }

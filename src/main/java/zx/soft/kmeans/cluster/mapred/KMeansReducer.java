@@ -52,7 +52,7 @@ public class KMeansReducer extends Reducer<IntWritable, VectorWritable, IntWrita
 			for (int i = 0; i < centroid.size(); ++i) {
 				double value = centroid.get(i) / num;
 				centroid.set(i, value);
-				residual += Math.abs(value - previous.get(i));
+				residual += Math.pow(value - previous.get(i), 2.0);
 			}
 
 			// 判断中心是否改变
