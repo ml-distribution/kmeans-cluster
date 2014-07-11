@@ -13,10 +13,10 @@ public class KMeansConstant {
 		CONVERGED
 	}
 
-	// 迭代
+	// 迭代收敛
 	public static final String ITERATIONS = "KMeansSimple.cluster.converged";
 
-	// 聚类
+	// 聚类数
 	public static final String CLUSTERS = "KMeansSimple.cluster.clusters";
 
 	// 迭代终止误差

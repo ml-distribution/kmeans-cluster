@@ -51,8 +51,8 @@ public class KMeansClusterDistribute extends Configured implements Tool {
 				IntWritable key = (IntWritable) ReflectionUtils.newInstance(reader.getKeyClass(), conf);
 				VectorWritable value = (VectorWritable) ReflectionUtils.newInstance(reader.getValueClass(), conf);
 				while (reader.next(key, value)) {
-					centroids.put(new Integer(key.get()), new VectorWritable(value.getVector(), value.getClusterId(),
-							value.getNumInstances()));
+					centroids.put(key.get(),
+							new VectorWritable(value.getVector(), value.getClusterId(), value.getNumInstances()));
 				}
 			} finally {
 				IOUtils.closeStream(reader);
@@ -72,7 +72,7 @@ public class KMeansClusterDistribute extends Configured implements Tool {
 		Path output = new Path(conf.get("output"));
 		Path centroids = new Path(conf.get("centroids"));
 		int nClusters = conf.getInt("clusters", 8);
-		int nReducers = conf.getInt("reducers", 10);
+		int nReducers = conf.getInt("reducers", 8);
 		float tolerance = conf.getFloat("tolerance", 1e-6F);
 
 		/**
@@ -85,7 +85,7 @@ public class KMeansClusterDistribute extends Configured implements Tool {
 		Job inputDataJob = new Job(dataConf);
 		inputDataJob.setJobName("KMeans-Cluster-Data-Input/Canopy");
 		inputDataJob.setJarByClass(KMeansClusterDistribute.class);
-		Path data = new Path(output.getParent(), "formattedData");
+		Path data = new Path(output, "formattedData");
 		HDFSUtils.delete(dataConf, data);
 
 		inputDataJob.setInputFormatClass(TextInputFormat.class);
@@ -113,12 +113,11 @@ public class KMeansClusterDistribute extends Configured implements Tool {
 		 * 
 		 * 如果使用Canopy聚类算法的话，无需执行该作业。
 		 */
-		Configuration centroidConf = new Configuration();
-		Job centroidInputJob = new Job(centroidConf);
+		Job centroidInputJob = new Job(dataConf);
 		centroidInputJob.setJobName("KMeans-Cluster-Centroid-Init");
 		centroidInputJob.setJarByClass(KMeansClusterDistribute.class);
-		Path centroidsPath = new Path(output.getParent(), "centroids_0");
-		HDFSUtils.delete(centroidConf, centroidsPath);
+		Path centroidsPath = new Path(output, "centroids_0");
+		HDFSUtils.delete(dataConf, centroidsPath);
 
 		centroidInputJob.setInputFormatClass(TextInputFormat.class);
 		centroidInputJob.setOutputFormatClass(SequenceFileOutputFormat.class);
@@ -152,8 +151,8 @@ public class KMeansClusterDistribute extends Configured implements Tool {
 			iterConf.setInt(KMeansConstant.CLUSTERS, nClusters);
 			iterConf.setFloat(KMeansConstant.TOLERANCE, tolerance);
 
-			Path nextIter = new Path(centroidsPath.getParent(), String.format("centroids_%s", iteration));
 			Path prevIter = new Path(centroidsPath.getParent(), String.format("centroids_%s", iteration - 1));
+			Path nextIter = new Path(centroidsPath.getParent(), String.format("centroids_%s", iteration));
 			iterConf.set(KMeansConstant.CENTROIDS, prevIter.toString());
 			Job iterJob = new Job(iterConf);
 			iterJob.setJobName("KMeans-Cluster-Iteration-" + iteration);
@@ -208,10 +207,10 @@ public class KMeansClusterDistribute extends Configured implements Tool {
 				VectorWritable value = (VectorWritable) ReflectionUtils.newInstance(reader.getValueClass(), conf);
 				while (reader.next(key, value)) {
 					System.out.print(String.format("Centroid %s: ", key.get()));
-					Vector<Double> v = value.getVector();
-					for (int i = 0; i < v.size(); ++i) {
-						System.out.print(String.format("%.2f", v.get(i).doubleValue()));
-						if (i < v.size() - 1) {
+					Vector<Double> vector = value.getVector();
+					for (int i = 0; i < vector.size(); ++i) {
+						System.out.print(String.format("%.2f", vector.get(i)));
+						if (i < vector.size() - 1) {
 							System.out.print(",");
 						}
 					}

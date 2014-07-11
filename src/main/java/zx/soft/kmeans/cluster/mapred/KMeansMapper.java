@@ -37,16 +37,15 @@ public class KMeansMapper extends Mapper<IntWritable, VectorWritable, IntWritabl
 			IOException {
 
 		// 计算当前的实例与聚类中心集合中最近的那个中心
-		Vector<Double> v = instance.getVector();
+		Vector<Double> vector = instance.getVector();
 		double distance = Double.MAX_VALUE;
 		int clusterId = -1;
 		for (VectorWritable centroid : centroids) {
 			// 计算Euclidean距离(L2 norm)
-			Vector<Double> c = centroid.getVector();
+			Vector<Double> temp = centroid.getVector();
 			double squaredSum = 0.0;
-			for (int i = 0; i < c.size(); ++i) {
-				double di = c.get(i).doubleValue() - v.get(i).doubleValue();
-				squaredSum += (di * di);
+			for (int i = 0; i < temp.size(); ++i) {
+				squaredSum += Math.pow(temp.get(i).doubleValue() - vector.get(i).doubleValue(), 2.0);
 			}
 			squaredSum = Math.sqrt(squaredSum);
 			if (squaredSum < distance) {

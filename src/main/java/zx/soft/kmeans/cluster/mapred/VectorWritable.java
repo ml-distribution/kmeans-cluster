@@ -10,6 +10,8 @@ import org.apache.hadoop.io.Writable;
 /**
  * 定义KMeans聚类的特征向量，除了特征向量自己外，还包含一个聚类ID。
  * 
+ * 注：这里的实例代表一个聚类点或者一条数据
+ * 
  * @author wanggang
  *
  */
@@ -17,7 +19,7 @@ public class VectorWritable implements Writable {
 
 	// 聚类ID
 	private int clusterId;
-	// 实例（一个聚类点或者一条数据）数量
+	// 实例数量
 	private int numInstances;
 	// 特征向量
 	private Vector<Double> vector;
@@ -30,8 +32,8 @@ public class VectorWritable implements Writable {
 		this(toWrite, clusterId, 1);
 	}
 
-	public VectorWritable(Vector<Double> toWrite, int clusterId, int numInstances) {
-		vector = toWrite;
+	public VectorWritable(Vector<Double> vector, int clusterId, int numInstances) {
+		this.vector = vector;
 		this.clusterId = clusterId;
 		this.numInstances = numInstances;
 	}

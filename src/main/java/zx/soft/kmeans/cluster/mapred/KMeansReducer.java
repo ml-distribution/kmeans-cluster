@@ -33,11 +33,11 @@ public class KMeansReducer extends Reducer<IntWritable, VectorWritable, IntWrita
 
 		Vector<Double> centroid = new Vector<>();
 		int num = 0;
-		for (VectorWritable v : instances) {
-			Vector<Double> instance = v.getVector();
-			if (instance.size() > 0) {
-				centroid = KMeansCombiner.add(centroid, instance);
-				num += v.getNumInstances();
+		for (VectorWritable instance : instances) {
+			Vector<Double> vector = instance.getVector();
+			if (vector.size() > 0) {
+				centroid = KMeansCombiner.add(centroid, vector);
+				num += instance.getNumInstances();
 			}
 		}
 
@@ -46,13 +46,13 @@ public class KMeansReducer extends Reducer<IntWritable, VectorWritable, IntWrita
 			// 使用上一次迭代的聚类中心
 			context.write(clusterId, centroids.get(clusterId.get()));
 		} else {
-			// 计算平均值，并记录当前值与上一次迭代的差的总和
+			// 计算平均值，并记录当前值与上一次迭代的差的绝对值的总和
 			double residual = 0.0;
 			Vector<Double> previous = centroids.get(clusterId.get()).getVector();
 			for (int i = 0; i < centroid.size(); ++i) {
-				double value = centroid.get(i).doubleValue() / num;
-				residual += (value - previous.get(i).doubleValue());
-				centroid.set(i, new Double(value));
+				double value = centroid.get(i) / num;
+				centroid.set(i, value);
+				residual += Math.abs(value - previous.get(i));
 			}
 
 			// 判断中心是否改变

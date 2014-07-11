@@ -63,15 +63,13 @@ public class KMeansDataInputMapper extends Mapper<LongWritable, Text, IntWritabl
 	@Override
 	public void map(LongWritable key, Text value, Context context) throws InterruptedException, IOException {
 		String[] elements = value.toString().trim().split("\\s");
-		if (!elements[0].equals("caseid")) {
-			Vector<Double> out = new Vector<>(elements.length - 1);
-			for (int i = 1; i < elements.length; ++i) {
-				out.add(Double.parseDouble(elements[i]));
-			}
-
-			// 将数据点输出到非聚类中
-			context.write(new IntWritable(-1), new VectorWritable(out, -1));
+		Vector<Double> vector = new Vector<>(elements.length);
+		for (int i = 0; i < elements.length; ++i) {
+			vector.add(Double.parseDouble(elements[i]));
 		}
+
+		// 将数据点输出到非聚类中
+		context.write(new IntWritable(-1), new VectorWritable(vector, -1));
 	}
 
 }
