@@ -12,6 +12,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
@@ -193,9 +194,38 @@ public class KMeansClusterDistribute extends Configured implements Tool {
 		logger.info("Number of iterations: " + (iteration - 1));
 
 		/**
+		 * 作业4：写入聚类结果
+		 */
+		Configuration clusterConf = new Configuration();
+		clusterConf.setInt(KMeansConstant.CLUSTERS, nClusters);
+		clusterConf.setFloat(KMeansConstant.TOLERANCE, tolerance);
+
+		Path prevIter = new Path(centroidsPath.getParent(), String.format("centroids_%s", iteration - 1));
+		Path clusterResult = new Path(centroidsPath.getParent(), "clusters-result");
+		clusterConf.set(KMeansConstant.CENTROIDS, prevIter.toString());
+		Job clusterJob = new Job(clusterConf);
+		clusterJob.setJobName("KMeans-Cluster-Result-Output");
+		clusterJob.setJarByClass(KMeansClusterDistribute.class);
+		HDFSUtils.delete(clusterConf, clusterResult);
+		clusterJob.setInputFormatClass(SequenceFileInputFormat.class);
+		clusterJob.setOutputFormatClass(SequenceFileOutputFormat.class);
+		clusterJob.setMapperClass(KMeansClusterMapper.class);
+		clusterJob.setMapOutputKeyClass(IntWritable.class);
+		clusterJob.setMapOutputValueClass(VectorWritable.class);
+		clusterJob.setOutputKeyClass(IntWritable.class);
+		clusterJob.setOutputValueClass(Text.class);
+		FileInputFormat.addInputPath(clusterJob, data);
+		FileOutputFormat.setOutputPath(clusterJob, clusterResult);
+		clusterJob.setNumReduceTasks(0);
+
+		if (!clusterJob.waitForCompletion(true)) {
+			System.err.println("ERROR: Cluster result output failed!");
+			System.exit(1);
+		}
+
+		/**
 		 * 读取聚类中心，并输出
 		 */
-		Path prevIter = new Path(centroidsPath.getParent(), String.format("centroids_%s", iteration - 1));
 		Configuration finalConf = getConf();
 		FileSystem fs = prevIter.getFileSystem(finalConf);
 		Path pathPattern = new Path(prevIter, "part-*");
